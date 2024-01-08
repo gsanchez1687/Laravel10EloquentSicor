@@ -60,11 +60,11 @@ class InclusiveJobCompanies extends Model
     
     //Cual es la tabla de la relacion de user_id
     //users
-    public function users():belongsTo{
+    public function users(){
         return $this->belongsTo(Users::class);
     }
 
-    public function InclusiveJobEmployees():HasOne{
+    public function InclusiveJobEmployees(){
         return $this->hasOne(InclusiveJobEmployees::class, 'company_id', 'id');
     }
 }

@@ -102,11 +102,11 @@ class InclusiveJobEmployees extends Model
         'date_balance_to_pay_real',
     ];
 
-    public function InclusiveJobCompanies():belongsTo{
-        return $this->belongsTo(InclusiveJobCompanies::class);
+    public function InclusiveJobCompanies(){
+        return $this->belongsTo(InclusiveJobCompanies::class, 'company_id', 'id');
     }
 
-    public function InclusiveJobTransactions():hasMany{
-        return $this->hasMany(InclusiveJobTransactions::class);
+    public function InclusiveJobTransactions(){
+        return $this->hasMany(InclusiveJobTransactions::class, 'employee_id', 'id');
     }
 }

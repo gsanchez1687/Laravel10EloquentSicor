@@ -27,11 +27,11 @@ class InclusiveJobTransactions extends Model
         'updated_at',
     ];
 
-    public function InclusiveJobEmployees(): HasOne{
+    public function InclusiveJobEmployees(){
         return $this->hasOne(InclusiveJobEmployees::class, 'id', 'employee_id');
     }
 
-    public function InclusiveJobCompanies(): HasOne{
+    public function InclusiveJobCompanies(){
         return $this->hasOne(InclusiveJobCompanies::class, 'id', 'company_id');
     }
 }
