@@ -102,11 +102,25 @@ class InclusiveJobEmployees extends Model
         'date_balance_to_pay_real',
     ];
 
+    protected $appends = [
+        "document_with_nit"
+    ];
+
+    protected $casts = [
+        'created_at' => 'datetime:Y-m-d', MessageFormatter::class
+    ];
+
+    //protected $with = ['InclusiveJobTransactions:id,company_id,status'];
+
     public function InclusiveJobCompanies(){
         return $this->belongsTo(InclusiveJobCompanies::class, 'company_id', 'id');
     }
 
     public function InclusiveJobTransactions(){
         return $this->hasMany(InclusiveJobTransactions::class, 'employee_id', 'id');
+    }
+
+    public function getDocumentWithNitAttribute(): string {
+        return sprintf('%s - %s', $this->document_number, $this->InclusiveJobCompanies->nit);
     }
 }

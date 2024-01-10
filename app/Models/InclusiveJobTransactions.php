@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Builder;
 
 class InclusiveJobTransactions extends Model
 {
@@ -33,5 +34,12 @@ class InclusiveJobTransactions extends Model
 
     public function InclusiveJobCompanies(){
         return $this->hasOne(InclusiveJobCompanies::class, 'id', 'company_id');
+    }
+
+    public static function scopeWhereDoesntHaveEmployee(Builder $builder): Builder{
+        return $builder
+        ->select(["id","company_id","employee_id","status"])
+        ->with(["InclusiveJobEmployees"])
+        ->doesntHave("InclusiveJobEmployees");
     }
 }

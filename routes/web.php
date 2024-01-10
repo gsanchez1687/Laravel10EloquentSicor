@@ -5,7 +5,8 @@ use App\Models\InclusiveJobCompanies;
 use App\Models\InclusiveJobTransactions;
 use App\Models\Users;
 use Illuminate\Support\Facades\Route;
-
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Collection;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -164,6 +165,176 @@ use Illuminate\Support\Facades\Route;
        $employee->load('InclusiveJobTransactions','InclusiveJobCompanies');
        return $employee;
     });
+
+
+    //CARGANDO RELACIONES CON SELECCION DE COLUMNAS
+    Route::get('employees/with-relation-with-columns/{id}',function($id){
+            try {
+                return InclusiveJobEmployees::select(["id","company_id","first_name"])
+            ->with([
+                "InclusiveJobTransactions:id,employee_id,company_id,status",
+                "InclusiveJobCompanies:id,nit,business_name"
+                ])
+            ->findOrFail($id);
+        } catch (\Exception $exception) {
+            return $exception->getMessage();
+        }
+     });
+
+     //CONTANDO RELACIONES, CUANTAS VECES APARECE UN EMPLEADO EN LAS <TRANSACCIONES></TRANSACCIONES>
+     Route::get('employees/with-count-employee/{id}',function($id){
+        return InclusiveJobEmployees::select(["id","company_id","first_name","document_number"])
+        ->withCount(["InclusiveJobTransactions"])
+        ->findOrFail($id);
+     });
+
+
+     //ACTUALIZAR REGISTROS DE FORMA RAPIDA Y EFICIENTE
+     Route::get("employees/update/{id}",function($id){
+        //en vez de hacer esto
+        //$employee = InclusiveJobEmployees::findOrFail($id);
+        //$employee->first_name = "Guillermo";
+        //$employee->save();
+        //return $employee;
+
+        //hacemos esto
+        return InclusiveJobEmployees::findOrFail($id)->update([
+            "first_name"=>"Guillermo",
+            "middle_name"=>"Enrique",
+        ]);
+     });
+
+
+     //ACTUALIZA SI EXISTE O CREA SI NO EXISTE
+        Route::get("employees/update-or-create/{id}",function($id){
+            return InclusiveJobEmployees::updateOrCreate(
+                ["id"=>$id],
+                [
+                    "company_id"=> InclusiveJobCompanies::all()->random(1)->first()->id,
+                    "first_name"=>"Guillermo",
+                    "middle_name"=>"Enrique",
+                ]
+            );
+        });
+
+
+        //ELIMINAR REGISTROS CON RELACIONES MANY TO MANY
+        Route::get("employees/delete/{id}",function($id){
+          try {
+            DB::beginTransaction();
+                $employee = InclusiveJobEmployees::findOrFail($id);
+                $employee->InclusiveJobTransactions()->detach();
+                $employee->delete();
+                return $employee;
+            DB::commit();
+          } catch (\Exception $exception) {
+            DB::rollback();
+            return $exception->getMessage();
+          }
+        });
+
+
+        //INCREMENTAR Y DESCREMENTAR COLUMNAS
+        Route::get("employees/increment/{id}",function($id){
+            return InclusiveJobEmployees::findOrFail($id)->increment("consecutivo");
+
+        });
+
+        //CHUNKS
+        Route::get("employees/chunks/{amount}",function($amount){
+            InclusiveJobEmployees::chunk($amount,function(Collection $chunk){
+                dd($chunk);
+            });
+        });
+
+        //CREAR REGISTROS RELACIONADOS
+        Route::get("employees/create-relation/{id}",function($id){
+            try {
+                DB::beginTransaction();
+                    $employee = InclusiveJobEmployees::findOrCreate(
+                        ["id"=>$id],
+                        [
+                            "company_id"=> InclusiveJobCompanies::all()->random(1)->first()->id,
+                            "first_name"=>"Guillermo",
+                            "middle_name"=>"Enrique",
+                        ]
+                    );
+                    $employee->InclusiveJobTransactions()->updateOrCreate(
+                        ["employee_id"=>$employee->id],
+                        [
+                        "company_id"=> InclusiveJobCompanies::all()->random(1)->first()->id,
+                        "status"=>"ACTIVO",
+                        ]
+                );
+                    return $employee;
+                DB::commit();
+              } catch (\Exception $exception) {
+                DB::rollback();
+                return $exception->getMessage();
+              }
+        });
+
+
+        //OBTENER REGISTROS QUE TENGAN 2 O MAS
+        Route::get("employees/has-two-or-more/",function(){
+            return InclusiveJobEmployees::select(["id","company_id","first_name"])
+            ->withCount(["InclusiveJobTransactions"])
+            ->has("InclusiveJobTransactions",">=",2)
+            ->get();
+        });
+
+        //OBTENER TRANSACCIONES CON EMPLEADOS Y SIN EMPLEADOS
+        Route::get("employees/with-where-has-emplosyees",function(){
+            //sin empleados
+            return InclusiveJobTransactions::select(["id","company_id","employee_id","status"])
+            ->with(["InclusiveJobEmployees"])
+            ->doesntHave("InclusiveJobEmployees")
+            ->get();
+
+            //con empleados
+            //return InclusiveJobTransactions::select(["id","company_id","employee_id","status"])
+            //->with(["InclusiveJobEmployees"])
+            //->whereHas("InclusiveJobEmployees")
+            //->get();
+        });
+
+        //SCOPE
+        Route::get("employees/scope",function(){
+            return InclusiveJobTransactions::whereDoesntHaveEmployee()->get();
+        });
+
+        //CARGAR RELACIONES AUTOMATICAMENTE
+        Route::get("employees/autoload-transaccion/{id}",function($id){
+            return InclusiveJobEmployees::with("InclusiveJobTransactions")->findOrFail($id);
+        });
+
+
+        //GENERAR ATRIBUTOS PERSONALIZADOS
+        Route::get("employees/custon-attribute/{id}",function($id){
+           return InclusiveJobEmployees::with("InclusiveJobCompanies")->findOrFail($id);
+        });
+
+
+        //BUSQUEDA POR FECHAS
+        Route::get("employees/search-by-date/{date}",function($date){
+            return InclusiveJobEmployees::with(["InclusiveJobCompanies"])
+            ->whereDate("created_at",$date)->get();
+        });
+
+        //BUAQUEDA POR MES Y DIA
+        Route::get("employees/search-by-month-and-day/{month}/{day}",function($month,$day){
+            return InclusiveJobEmployees::with(["InclusiveJobCompanies"])
+            ->whereMonth("created_at",$month)
+            ->whereDay("created_at",$day)
+            ->get();
+        });
+
+        //BUSQUEDA POR RAMGO DE FECHAS
+        Route::get("employees/search-by-date-range/{start}/{end}",function($start,$end){
+            return InclusiveJobEmployees::with(["InclusiveJobCompanies"])
+            ->whereBetween("created_at",[$start,$end])
+            ->get();
+        });
 
 
 //FIN DE EMPLEADOS
